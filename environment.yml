@@ -1,0 +1,17 @@
+name: protein_bound_fraction_env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.9
+  - numpy
+  - pandas
+  - matplotlib
+  - seaborn
+  - scikit-learn
+  - scikit-image
+  - scipy
+  - tqdm
+  - joblib
+  - pip
+  - pip:
+      - natsort

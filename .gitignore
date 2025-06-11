@@ -1,0 +1,14 @@
+# .gitignore
+__pycache__/
+*.py[cod]
+*.log
+*.sqlite3
+*.pkl
+*.joblib
+*.ipynb_checkpoints/
+.DS_Store
+.env
+.envrc
+.venv/
+.vscode/
+

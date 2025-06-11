@@ -1,0 +1,52 @@
+{   "quality_control": true,
+    "path": {
+      "input_dir": "/Users/masoomeshafiee/Desktop/test/input",
+      "masks_dir": "/Users/masoomeshafiee/Desktop/test/masks",
+      "spot_suffix": "_spots.csv",
+      "track_suffix": "_tracks.csv",
+      "mask_suffix": "_w2T2 GFP_cp_masks.png",
+      "dry_run": true
+    },
+    "columns_names": {
+      "spots": ["track_id", "frame_number", "x_loc", "y_loc", "intensity"],
+      "tracks": ["track_id", "spt_tr", "spt_widt", "mean_sp", "max_sp", "min_sp",
+                 "med_sp", "std_sp", "mean_q", "max_q", "min_q", "med_q", "std_q",
+                 "track_duration", "tr_start", "tr_fin", "x_loc", "y_loc"]
+    },
+    "filtering": {
+      "min_track_duration": 4
+    },
+    "feature_extraction": {
+      "feature_list": ["radius_of_gyration"]
+    },
+    "classification": {
+      "n_components": 2,
+      "confidence_level": 0.6,
+      "feature_to_classify": "log_rg"
+    },
+    "plot": {
+      "plot_results": true,
+      "plot_thresholds": true,
+      "plot_settings": {
+        "bins": 50,
+        "hist_color": "gray",
+        "hist_label": "Data histogram",
+        "title": "GMM Classification of Radius of Gyration",
+        "xlabel": "log(Radius of Gyration)",
+        "ylabel": "Density",
+        "title_fontsize": 14,
+        "label_fontsize": 14
+      }
+    },
+    "output_config": {
+      "output_dir": "/Users/masoomeshafiee/Desktop/test/output",
+      "single_cell_plot_name": "single_cell_classification.svg",
+      "classification_plot_name": "classification_plot.svg"
+    },
+    "single_cell": {
+      "box_plot": true,
+      "min_tracks_per_cell": 100
+    },
+    "analyze_single_cell": true
+  }
+  
