@@ -179,6 +179,6 @@ The GMM is used in the pipeline to:
 ---
 
 ## Tips
-- Use consistent naming across spot, track, and mask files to ensure proper file matching.
+- Use consistent naming across spot, track, and mask files to ensure proper file matching. Consult the `file_name_handling_doc.md`.
 
 
