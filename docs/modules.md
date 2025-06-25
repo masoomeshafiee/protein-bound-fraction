@@ -487,9 +487,9 @@ Top-level API to extract features (currently `radius_of_gyration`) from filtered
 
 ---
 ## `Motion_classifier.py` - Motion behavior Classification for the tracks
-This module classifies single-molecule trajectories based on their motion patterns (e.g., bound vs. diffusive) using a Gaussian Mixture Model (GMM) applied to log-transformed features such as the radius of gyration.
+This module classifies single-molecule trajectories based on their motion patterns (e.g., bound vs. diffusive) using a Gaussian Mixture Model (GMM) applied to log-transformed features such as the radius of gyration. It has the option to use an already fitted gmm model instead of fitting a new model with the current data, if classification_config[`fit_new_gmm`] = false. 
 
-- Fit a GMM to log-transformed track features (e.g., log_rg)
+- Fit a GMM to log-transformed track features (e.g., log_rg), or use an existing gmm model to keep the gmm parameters consistent accross different datasets. 
 - Assign tracks to motion classes (e.g., class_0, class_1) with confidence levels
 - Compute thresholds between GMM components
 - Plot classification histograms and component distributions
@@ -510,7 +510,7 @@ This module classifies single-molecule trajectories based on their motion patter
 | `single_cell_analysis`  | `bool`         | If `True`, calculates per-cell bound fractions. Default is `False`.                                                                                                                    |
 
 **Returns**
-- gmm: Fitted GaussianMixture object.
+- gmm: Fitted GaussianMixture object or the gmm that was loaded and used for the classification. 
 
 - classified_df: DataFrame with assigned class, confidence, and status.
 
@@ -521,7 +521,7 @@ This module classifies single-molecule trajectories based on their motion patter
 
 #### Module Functions
 - gmm_fit(data, n_components, random_state)
-Fit a GMM to the input data.
+Fit a GMM to the input data if classification_config[`fit_new_gmm`] = true.
 
 - compute_threshold(gmm_model)
 Estimate the threshold (intersection point) between each adjacent GMM component.
@@ -547,7 +547,9 @@ Boxplot visualization of bound fractions across cells.
 classification_config = {
     "n_components": 2,
     "confidence_level": 0.9,
-    "feature_to_classify": "log_rg"
+    "feature_to_classify": "log_rg",
+    "fit_new_gmm" : True,
+    "gmm_model_path": "/path/to/an/existing/gmm_model.joblib"
 }
 
 plot_config = {

@@ -60,6 +60,9 @@ def main(config_path):
         # Step 3: Extract features
         logging.info("Extracting features...")
         processed_data, issue_dict = extract_features(filtered_data, issue_dict, config['columns_names'], config['feature_extraction']['feature_list'], config['analyze_single_cell'])
+        if processed_data.empty:
+            logging.error("No valid tracks found after feature extraction. Exiting pipeline.")
+            return
 
         # Step 4: Classification
         logging.info("Running classification...")

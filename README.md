@@ -8,11 +8,17 @@ This repository contains a modular Python pipeline to process microscopy trackin
 - Track-to-cell assignment from segmentation masks and Data filtering 
 - Feature extraction (e.g., radius of gyration)
 - GMM-based multi-class motion classification
+- Supports using a pre-trained GMM model for classification to ensure consistency across datasets or reuse previously optimized models
 - Single-cell level bound fraction analysis
 - Plotting
 - Modular configurable, and scalable
 - Real-time logging to easily track errors and monitor pipeline progress
 - Metadata saving for reproducibility
+
+Note: To use a pre-trained GMM model instead of fitting a new one, set
+`classification["fit_new_gmm"] = false ` in the config file,
+and provide the path to your model using `classification["gmm_model_path"]`.
+This ensures consistent component parameters across runs or datasets.
 
 ## Modules
 - `load_data.py`: Load input tracking/spot/mask files
@@ -171,8 +177,8 @@ protein-bound-fraction-pipeline/
 │   ├── config_doc.md   
 │   ├── troubleshooting.md      
 │   ├── modules.md       
-│   ├── inputs/outputs.md 
-│   ├── diagrams
+│   ├── inputs_outputs.md 
+│   ├── file_name_handling_doc.md 
 │ 
 ```
 

@@ -22,7 +22,9 @@
     "classification": {
       "n_components": 2,
       "confidence_level": 0.6,
-      "feature_to_classify": "log_rg"
+      "feature_to_classify": "log_rg",
+      "fit_new_gmm": false,
+      "gmm_model_path": "/Users/masoomeshafiee/Desktop/test/output/gmm_model.joblib"
     },
     "plot": {
       "plot_results": true,
@@ -47,6 +49,6 @@
       "box_plot": true,
       "min_tracks_per_cell": 100
     },
-    "analyze_single_cell": true
+    "analyze_single_cell": false
   }
   

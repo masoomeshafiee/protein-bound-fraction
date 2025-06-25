@@ -5,6 +5,7 @@ from sklearn.mixture import GaussianMixture
 from scipy.stats import norm
 from scipy.optimize import brentq
 import matplotlib.pyplot as plt
+import joblib
 import os
 import logging
 
@@ -315,6 +316,7 @@ def classify_tracks(processed_data, classification_config, plot_config, output_c
 
     """
     logging.info("Starting GMM fiting and classification ...")
+    fit_new_gmm = classification_config.get('fit_new_gmm', True)
     n_components = classification_config['n_components']
     feature = classification_config['feature_to_classify']
     confidence_level = classification_config['confidence_level']
@@ -328,9 +330,21 @@ def classify_tracks(processed_data, classification_config, plot_config, output_c
     except KeyError:
         logging.error("'log_rg' column not found in processed_data.")
         raise
-
-    gmm = gmm_fit(log_rg_data.reshape(-1, 1), n_components, random_state)
-    logging.info(f"GMM model fitted with {n_components} components.")
+    
+    if fit_new_gmm:
+        gmm = gmm_fit(log_rg_data.reshape(-1, 1), n_components, random_state)
+        logging.info(f"GMM model fitted with {n_components} components.")
+    else:
+        # Load a gmm model
+        gmm_path = classification_config['gmm_model_path']
+        gmm = joblib.load(gmm_path)
+        logging.info("Loaded existing GMM model.")
+        
+        # Check if the GMM has the expected number of components
+        if gmm.n_components != n_components:
+            logging.error(f"Expected GMM with {n_components} components, but got {gmm.n_components}.")
+            raise ValueError(f"Expected GMM with {n_components} components, but got {gmm.n_components}.")
+        
 
     # Assign classes to tracks based on GMM
     classified_df, component_to_class = assign_classes(processed_data, gmm, feature, confidence_level)

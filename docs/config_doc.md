@@ -62,6 +62,8 @@ Settings for classifying molecular motion using a Gaussian Mixture Model (GMM).
 | `n_components`         | `int`     | Number of Gaussian components to fit. Typically 2 for "bound" vs "diffusive". |
 | `confidence_level`     | `float`   | Confidence threshold for classification. Values range from 0.0 to 1.0. If 0.0 the confidence is not considered.  |
 | `feature_to_classify`  | `str`     | Feature to use for classification. Typically `"log_rg"` (log radius of gyration). |
+| `fit_new_gmm`  | `bool`     | If `true`, the data will be fitted to a new gmm, if `false` the script loads an existing gmm model for classification . |
+| `gmm_model_path`  | `str`     | path to an existing model that you want to use for current classification ( if `fit_new_gmm` = `false`). otherwise you can leave it with an arbitrary string such as "NA", it does not affect the pipeline. |
 
 ---
 

@@ -62,7 +62,10 @@ def extract_rg(file_name, data_block, issue_dict, columns_names, cell_id = None)
         if cell_id:
             rg_df['cell_id'] = cell_id
         logging.info(f"Extracted radius of gyration for {file_name}" + (f", cell {cell_id}" if cell_id else ""))
-        rg_df = rg_df[['file_name', 'cell_id', 'track_id', 'radius_of_gyration', 'log_rg']]
+        columns = ['file_name', 'track_id', 'radius_of_gyration', 'log_rg']
+        if cell_id:
+            columns.insert(1, 'cell_id')
+        rg_df = rg_df[columns]
         return rg_df
     except Exception as e:
         log_issue(issue_dict, file_name, cell_id, message=f"Error calculating radius of gyration: {e}", level='error')
