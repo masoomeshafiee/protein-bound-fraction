@@ -72,7 +72,7 @@ def filter_spots(spots, filtered_tracks):
 
 
 
-def filter_population_level(file_name, file_data, min_track_length, issue_dict, columns_names):
+def filter_population_level(file_name, file_data, min_track_length, issue_dict, columns_names, pixel_size_um=0.094):
     """
     Population level analysis
     Filters the tracks and spots for each file (only keeps the tracks that land in the cell mask for that file).
@@ -123,6 +123,11 @@ def filter_population_level(file_name, file_data, min_track_length, issue_dict, 
         log_issue(issue_dict, file_name, message="No corresponding spots found for the filtered tracks, skipping the file.", level='warning')
         return {}
     
+    # add the x and y in microns columns to the filtered spots and tracks
+    filtered_spots['x_loc_um'] = filtered_spots['x_loc'] * pixel_size_um
+    filtered_spots['y_loc_um'] = filtered_spots['y_loc'] * pixel_size_um
+    filtered_tracks['x_loc_um'] = filtered_tracks['x_loc'] * pixel_size_um
+    filtered_tracks['y_loc_um'] = filtered_tracks['y_loc'] * pixel_size_um
 
     # add the filtered data to the filtered_data dictionary
     filtered_data = {
@@ -133,7 +138,7 @@ def filter_population_level(file_name, file_data, min_track_length, issue_dict, 
     logging.info(f"Filtered data for {file_name} with total number of tracks: {len(file_data['tracks'])} and {len(filtered_tracks)} number of tracks in the mask.")
     return filtered_data
 
-def filter_single_cell_level(file_name, file_data, min_track_length, issue_dict, columns_names):
+def filter_single_cell_level(file_name, file_data, min_track_length, issue_dict, columns_names, pixel_size_um=0.094):
     """
     single cell level analysis
     Preprocesses the tracks and filters the tracks and spots for each cell in the file (only keeps the tracks that land in that cell).
@@ -189,6 +194,11 @@ def filter_single_cell_level(file_name, file_data, min_track_length, issue_dict,
         if filtered_spots.empty:
             log_issue(issue_dict, file_name, cell_id=cell_id, message="No corresponding spots found for the filtered tracks in cell.")
             continue
+        # add the x and y in microns columns to the filtered spots and tracks
+        filtered_spots['x_loc_um'] = filtered_spots['x_loc'] * pixel_size_um
+        filtered_spots['y_loc_um'] = filtered_spots['y_loc'] * pixel_size_um
+        filtered_tracks['x_loc_um'] = filtered_tracks['x_loc'] * pixel_size_um
+        filtered_tracks['y_loc_um'] = filtered_tracks['y_loc'] * pixel_size_um
         # add the filtered data to the cell_data dictionary
         cell_data[cell_id] = {
             'spots': filtered_spots,
@@ -206,8 +216,7 @@ def filter_single_cell_level(file_name, file_data, min_track_length, issue_dict,
 # Public API
 # ===============================
 
-
-def filter_tracks_and_spots(data, min_track_length, columns_names, analyze_single_cell=False):
+def filter_tracks_and_spots(data, min_track_length, columns_names, pixel_size_um=0.094, analyze_single_cell=False):
     """
     Filters the tracks and spots data based on the mask and minimum track length.
 
@@ -215,11 +224,15 @@ def filter_tracks_and_spots(data, min_track_length, columns_names, analyze_singl
     - data: Dictionary containing the data for each file.
     - min_track_length: Minimum length of the tracks to keep.
     - columns_names: Dictionary containing the expected column names for spots and tracks.
+    - pixel_size_um: Pixel size in micrometers.
     - analyze_single_cell: Boolean indicating if the analysis is for single cell level or population level. If True, the function will filter tracks and spots for each cell in the file.
 
     Returns:
     - filtered: Dictionary containing the filtered data. {'file_name': {'spots': DataFrame, 'tracks': DataFrame, 'mask': np.ndarray}} or {file_name: {cell_id: {'spots': DataFrame, 'tracks': DataFrame, 'mask': np.ndarray}}} if analyze_single_cell is True.
     - issue_dict: Dictionary containing the issues encountered during filtering. {'file_name': {'cell_id (file)': issue message}}
+    
+    Note: 
+    The x and y locations in the filtered spots and tracks are converted to microns and added as new columns 'x_loc_um' and 'y_loc_um' to be used in the further analysis steps.
     """
     
     filtered = {}
@@ -228,11 +241,11 @@ def filter_tracks_and_spots(data, min_track_length, columns_names, analyze_singl
         # decide if the analysis is for a single cell or not
         if not analyze_single_cell:
             # population level analysis
-            result = filter_population_level(file_name, file_data, min_track_length, issue_dict, columns_names)
+            result = filter_population_level(file_name, file_data, min_track_length, issue_dict, columns_names, pixel_size_um)
         else:
             # single cell level analysis
-            result = filter_single_cell_level(file_name, file_data, min_track_length, issue_dict, columns_names)
-        
+            result = filter_single_cell_level(file_name, file_data, min_track_length, issue_dict, columns_names, pixel_size_um)
+
         if result:
             filtered[file_name] = result
 
@@ -240,6 +253,6 @@ def filter_tracks_and_spots(data, min_track_length, columns_names, analyze_singl
     if not filtered:
         logging.error("No data found after filtering. Please check the input data.")
         raise ValueError("No data found after filtering. Please check the input data.")
-    logging.info('successfully filtered the data based on the masks provided.')
+    logging.info('successfully filtered the data based on the masks provided. x and y locations are converted to microns and added as new columns.')
     return filtered, issue_dict
 
