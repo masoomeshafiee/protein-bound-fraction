@@ -55,11 +55,15 @@ def main(config_path):
 
         # Step 2: Filter tracks and spots
         logging.info("Filtering data...")
-        filtered_data, issue_dict = filter_tracks_and_spots(data, config['filtering']['min_track_duration'], config['columns_names'], config['analyze_single_cell'])
+        filtered_data, issue_dict = filter_tracks_and_spots(data, config['filtering']['min_track_duration'], config['columns_names'], pixel_size_um=config['filtering']['pixel_size_um'], analyze_single_cell=config['analyze_single_cell'])
 
         # Step 3: Extract features
         logging.info("Extracting features...")
-        processed_data, issue_dict = extract_features(filtered_data, issue_dict, config['columns_names'], config['feature_extraction']['feature_list'], config['analyze_single_cell'])
+        columns_names = config['columns_names'].copy()
+        # adding the x and y in microns columns to columns_names dictionary
+        columns_names['x_loc_um'] = 'x_loc_um'
+        columns_names['y_loc_um'] = 'y_loc_um'
+        processed_data, issue_dict = extract_features(filtered_data, issue_dict, columns_names, config['feature_extraction']['feature_list'], config['analyze_single_cell'], MSD_params=config['feature_extraction'].get('MSD_params', None))
         if processed_data.empty:
             logging.error("No valid tracks found after feature extraction. Exiting pipeline.")
             return
