@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import joblib
 import os
 import logging
+from scipy.optimize import curve_fit
+from matplotlib.backends.backend_pdf import PdfPages
 
 # configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -60,25 +62,25 @@ def compute_threshold(gmm_model):
     return thresholds
 
 
-def assign_classes(rg_df, gmm, feature = 'log_rg', confidence_level=0.9):
+def assign_classes(feature_df, gmm, feature = 'log_rg', confidence_level=0.9):
     """
     Assigns each track to a class based on a fitted multi-component GMM.
 
     Parameters:
-    - rg_df: pd.DataFrame with 'log_rg'
+    - feature_df: pd.DataFrame with chosen feature column.
     - gmm: Fitted GaussianMixture model (with ≥2 components)
-    - feature: str, column name in rg_df to use for classification (default: 'log_rg')
+    - feature: str, column name in feature_df to use for classification (default: 'log_rg')
     - confidence_level: Float, e.g. 0.9 — minimum probability to confidently assign class
 
     Returns:
-    - classified_df: copy of rg_df with added coloumns ['predicted_class', 'confidence', 'status']
+    - classified_df: copy of feature_df with added coloumns ['predicted_class', 'confidence', 'status']
     - component_to_class: dict mapping component indices to class labels
     """
-    if feature not in rg_df.columns:
+    if feature not in feature_df.columns:
         logging.error(f"Missing feature column: '{feature}' in input dataframe.")
         raise ValueError(f"Input DataFrame must contain {feature} column.")
-    
-    X = rg_df[feature].to_numpy().reshape(-1, 1)
+
+    X = feature_df[feature].to_numpy().reshape(-1, 1)
 
     logging.info(f"Classifying {len(X)} data points using feature '{feature}'.")
     probs = gmm.predict_proba(X)
@@ -104,7 +106,7 @@ def assign_classes(rg_df, gmm, feature = 'log_rg', confidence_level=0.9):
             predicted_class.append("uncertain")
             status.append("low_confidence")
 
-    classified_df = rg_df.copy()
+    classified_df = feature_df.copy()
     classified_df['predicted_class'] = predicted_class
     classified_df['confidence'] = confidences
     classified_df['status'] = status
@@ -112,7 +114,7 @@ def assign_classes(rg_df, gmm, feature = 'log_rg', confidence_level=0.9):
     logging.info(f"Completed class assignment. {sum(np.array(status)=='confident')} confident assignments.")
     return classified_df, component_to_class
 
-def summarize_classification(classifed_df, class_column="predicted_class"):
+def summarize_classification(classified_df, class_column="predicted_class"):
     """
     Computes summary statistics of classification results.
 
@@ -123,12 +125,12 @@ def summarize_classification(classifed_df, class_column="predicted_class"):
     Returns:
     - summary_df: DataFrame with sample-size and percentages.
     """
-    if class_column not in classifed_df.columns:
+    if class_column not in classified_df.columns:
         logging.error(f"Column '{class_column}' not found in classified_df.")
         raise ValueError(f"Column '{class_column}' not found in input DataFrame.")
 
-    total = len(classifed_df)
-    counts = classifed_df[class_column].value_counts()
+    total = len(classified_df)
+    counts = classified_df[class_column].value_counts()
     summary_df = pd.DataFrame({
         'sample_size': total,
         'class': counts.index,
@@ -141,10 +143,10 @@ def summarize_classification(classifed_df, class_column="predicted_class"):
 
 def plot_classification_results(data, gmm, plot_settings, summary_df, thresholds=None, save_path=None):
     """
-    Plot the histogram of log(radius of gyration) with GMM components and classification summary.
+    Plot the histogram of feature values with GMM components and classification summary.
 
     Parameters:
-    - data: np.array of log(Rg) values to plot.
+    - data: np.array of feature values to plot.
     - gmm: Fitted GaussianMixture model.
     - plot_settings: dict with plot settings like title, xlabel, ylabel, etc.
     - summary_df: pd.DataFrame from summarize_classification with 'class' and 'percent' columns.
@@ -176,7 +178,7 @@ def plot_classification_results(data, gmm, plot_settings, summary_df, thresholds
         plt.plot(
             x,
             weight * norm.pdf(x, mean, std),
-            label=f"class_{i} (mean={mean:.2f})",
+            label=f"class_{i}" + f"(bound)" if i==0 else "(diffusive)" + f"(mean(log)={mean:.2f})" + f" (mean={10 ** mean:.2f})" if plot_settings.get('log_scale', False) else "",
             linewidth=2
         )
 
@@ -200,7 +202,6 @@ def plot_classification_results(data, gmm, plot_settings, summary_df, thresholds
     plt.ylabel(plot_settings['ylabel'], fontsize=plot_settings['label_fontsize'])
     plt.legend()
     plt.tight_layout()
-
     
     if save_path:
         try:
@@ -303,7 +304,7 @@ def classify_tracks(processed_data, classification_config, plot_config, output_c
     Classify tracks using GMM.
 
     Parameters:
-    - processed_data: pd.DataFrame with 'radius_of_gyration' and 'log_rg' column.
+    - processed_data: pd.DataFrame with required classification features. Example:'radius_of_gyration' and 'log_rg' column.
     - classification_config: dict with keys 'n_components' (int) and 'confidence_level' (float).
     - plot_config: dict with keys 'plot_results' (bool), 'plot setting' (str, optional).
     - output_config: 'save_plot'(bool), output_path
@@ -324,15 +325,15 @@ def classify_tracks(processed_data, classification_config, plot_config, output_c
     plot_settings = plot_config['plot_settings']
     output_dir = output_config['output_dir']
 
-    # Fit GMM to log-transformed radius of gyration data
+    # Fit GMM to log-transformed of selected feature data
     try:
-        log_rg_data = processed_data['log_rg'].to_numpy()
+        feature_data = processed_data[feature].to_numpy()
     except KeyError:
-        logging.error("'log_rg' column not found in processed_data.")
+        logging.error(f"'{feature}' column not found in processed_data.")
         raise
     
     if fit_new_gmm:
-        gmm = gmm_fit(log_rg_data.reshape(-1, 1), n_components, random_state)
+        gmm = gmm_fit(feature_data.reshape(-1, 1), n_components, random_state)
         logging.info(f"GMM model fitted with {n_components} components.")
     else:
         # Load a gmm model
@@ -356,12 +357,13 @@ def classify_tracks(processed_data, classification_config, plot_config, output_c
     if plot_results:
         save_path = os.path.join(output_dir, output_config['classification_plot_name'])
         if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+                os.makedirs(output_dir)
         if plot_config['plot_thresholds']:
             thresholds = compute_threshold(gmm)
-            plot_classification_results(log_rg_data.flatten(), gmm, plot_settings, summary_df, thresholds=thresholds, save_path=save_path)
+            plot_classification_results(feature_data.flatten(), gmm, plot_settings, summary_df, thresholds=thresholds, save_path=save_path)
         else:
-            plot_classification_results(log_rg_data.flatten(), gmm, plot_settings, summary_df, save_path=save_path)
+            plot_classification_results(feature_data.flatten(), gmm, plot_settings, summary_df, save_path=save_path)
+        
 
     # single cell analysis
     # Dynamically resolve bound class
