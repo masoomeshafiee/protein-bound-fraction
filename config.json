@@ -31,7 +31,7 @@
     "classification": {
       "n_components": 2,
       "confidence_level": 0,
-      "feature_to_classify": "log_diffusion_coefficient",
+      "feature_to_classify": "log_rg",
       "fit_new_gmm": true,
       "gmm_model_path": "/Users/masoomeshafiee/Desktop/test/output/gmm_model.joblib"
     },
