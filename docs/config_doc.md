@@ -42,6 +42,7 @@ Criteria for filtering tracks prior to analysis.
 | Key                 | Type  | Description |
 |---------------------|-------|-------------|
 | `min_track_duration` | `int` | Minimum duration (in frames) a track must have to be included in the analysis. |
+| `pixel_size_um` | `float` | Pixle size of the microscope used in micrometer. To be used for converting the x and y position in real-world units. |
 
 ---
 
@@ -50,7 +51,20 @@ Specifies which features should be extracted from tracks.
 
 | Key           | Type     | Description |
 |---------------|----------|-------------|
-| `feature_list` | `list[str]` | List of features to extract. Supported: `"radius_of_gyration"` |
+| `feature_list` | `list[str]` | List of features to extract. Supported so far: `["radius_of_gyration", "msd_features"]` |
+| `MSD_params` | `dict` | Parameters related to the MSD feature analysis. See the table below for details. |
+**`MSD_params:`**
+| Key           | Type     | Description |
+|---------------|----------|-------------|
+| `use_brownian_only` | `bool` |   If set to ture, it assumes the moleculs follow brownian motion so it sets alpha = 1. If set to false, it will calculate the alpha for the molecules.|
+| `b` | `float` | Localization error (in microns). If set to 0.0, we dont correct for the localization error. |
+| `frame_interval` | `float` | Time interval used for imaging (in second). |
+| `T_int` | `float` | Integration time (in seconds). Could be set the same as the exposure time. |
+| `T_exp` | `float` | Laser Exposure time (in seconds). |
+| `max_time_lag` | `float` | Maximum time lag to be used for fitting the MSD. Default is set to null (we include all time lags for fitting the MSD.) |
+
+
+
 
 ---
 
@@ -61,7 +75,7 @@ Settings for classifying molecular motion using a Gaussian Mixture Model (GMM).
 |------------------------|-----------|-------------|
 | `n_components`         | `int`     | Number of Gaussian components to fit. Typically 2 for "bound" vs "diffusive". |
 | `confidence_level`     | `float`   | Confidence threshold for classification. Values range from 0.0 to 1.0. If 0.0 the confidence is not considered.  |
-| `feature_to_classify`  | `str`     | Feature to use for classification. Typically `"log_rg"` (log radius of gyration). |
+| `feature_to_classify`  | `str`     | Feature to use for classification. Typically used either `"log_rg"` (**natural logarithm** of radius of gyration) or `"log_diffusion_coefficient"`(**logarithm (base = 10)** of the diffusion coefficient). Others include: `"radius_of_gyration"`, `"diffusion_coefficient"`, and `"anomalous_exponent"`. |
 | `fit_new_gmm`  | `bool`     | If `true`, the data will be fitted to a new gmm, if `false` the script loads an existing gmm model for classification . |
 | `gmm_model_path`  | `str`     | path to an existing model that you want to use for current classification ( if `fit_new_gmm` = `false`). otherwise you can leave it with an arbitrary string such as "NA", it does not affect the pipeline. |
 
@@ -117,6 +131,7 @@ Settings for analyzing and visualizing single-cell classification results.
 ---
 
 ## Notes
+
 - Ensure that input file names follow consistent naming conventions that match the provided suffixes. You can use the file_name_handling.py to change the spots and tracks base name to match the corresponding mask base name. 
 - The configuration file must be saved as JSON (`.json`) and loaded at the beginning of the pipeline execution. You can use the config.json file and change it as you wish. A copy of your config file will be saved in the output directory for reproducibility. 
 
