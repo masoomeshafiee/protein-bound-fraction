@@ -175,12 +175,20 @@ def plot_classification_results(data, gmm, plot_settings, summary_df, thresholds
         mean = gmm.means_[comp_idx, 0]
         std = np.sqrt(gmm.covariances_[comp_idx, 0])
         weight = gmm.weights_[comp_idx]
-        plt.plot(
-            x,
-            weight * norm.pdf(x, mean, std),
-            label=f"class_{i}" + f"(bound)" if i==0 else "(diffusive)" + f"(mean(log)={mean:.2f})" + f" (mean={10 ** mean:.2f})" if plot_settings.get('log_scale', False) else "",
-            linewidth=2
-        )
+        if len(sorted_indices)==2:
+            plt.plot(
+                x,
+                weight * norm.pdf(x, mean, std),
+                label=f"class_{i}" + (f"(bound)" if i==0 else "(diffusive)" )+ f" mean(log)={mean:.2f}" + f" mean={10 ** mean:.3f}" if plot_settings.get('log_scale', False) else "",
+                linewidth=2
+            )
+        else:
+            plt.plot(
+                x,
+                weight * norm.pdf(x, mean, std),
+                label=f"class_{i}" + f" mean(log)={mean:.2f}" + f" mean={10 ** mean:.3f}" if plot_settings.get('log_scale', False) else "",
+                linewidth=2
+            )
 
     # Optional threshold lines
     if thresholds is not None:
