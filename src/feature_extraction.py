@@ -168,7 +168,7 @@ def extract_msd(file_name, data_block, issue_dict, columns_names, cell_id=None, 
     msd_features = []
     for track_id, track_spots in spots_data.groupby('track_id'):
         try: 
-            print(spots_data[['x_loc_um','y_loc_um']].describe())
+            
             time_col = "frame_number"
             track_spots = track_spots.sort_values(time_col).reset_index(drop=True)
             msd = calculate_MSD(track_spots, x='x_loc_um', y='y_loc_um') # list of MSD values for increasing time lags
