@@ -1,8 +1,8 @@
 {
     "quality_control": true,
     "path": {
-        "input_dir": "/Users/masoomeshafiee/Desktop/test/input",
-        "masks_dir": "/Users/masoomeshafiee/Desktop/test/masks",
+        "input_dir": "/Users/masoomeshafiee/Projects/protein-bound-fraction/example_data/input",
+        "masks_dir": "/Users/masoomeshafiee/Projects/protein-bound-fraction/example_data/masks",
         "spot_suffix": "_spots.csv",
         "track_suffix": "_tracks.csv",
         "mask_suffix": "_w2T2 GFP_cp_masks.png",
@@ -38,12 +38,22 @@
         ]
     },
     "filtering": {
-        "min_track_duration": 4
+        "min_track_duration": 4,
+        "pixel_size_um": 0.094
     },
     "feature_extraction": {
         "feature_list": [
-            "radius_of_gyration"
-        ]
+            "radius_of_gyration",
+            "msd_features"
+        ],
+        "MSD_params": {
+            "use_brownian_only": true,
+            "b": 0.0,
+            "frame_interval": 0.01,
+            "T_int": 0.01,
+            "T_exp": 0.01,
+            "max_time_lag": null
+        }
     },
     "classification": {
         "n_components": 2,
@@ -59,17 +69,18 @@
             "bins": 50,
             "hist_color": "gray",
             "hist_label": "Data histogram",
-            "title": "GMM Classification of Radius of Gyration",
-            "xlabel": "log(Radius of Gyration)",
+            "log_scale": true,
+            "title": "GMM Classification of log_diffusion_coefficient",
+            "xlabel": "log(Diffusion Coefficient(\u00b5m\u00b2/s))",
             "ylabel": "Density",
             "title_fontsize": 14,
             "label_fontsize": 14
         }
     },
     "output_config": {
-        "output_dir": "/Users/masoomeshafiee/Desktop/test/output",
+        "output_dir": "/Users/masoomeshafiee/Desktop/test/output/pdf",
         "single_cell_plot_name": "single_cell_classification.svg",
-        "classification_plot_name": "classification_plot.svg"
+        "classification_plot_name": "classification_plot.pdf"
     },
     "single_cell": {
         "box_plot": true,

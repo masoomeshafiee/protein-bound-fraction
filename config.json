@@ -59,6 +59,6 @@
       "box_plot": true,
       "min_tracks_per_cell": 30
     },
-    "analyze_single_cell": false
+    "analyze_single_cell": true
   }
   
