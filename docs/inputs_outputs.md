@@ -66,7 +66,12 @@ Filtered tracks with extracted motion features.
 | `cell_id`              | Associated cell ID (if single-cell analysis enabled)        |
 | `track_id`             | Unique ID of the track                       |
 | `radius_of_gyration`   | Raw radius of gyration           |
-| `log_rg`               | Log-transformed radius of gyration           |
+| `log_rg`               | Log-transformed radius of gyration (natural log)           |
+| `diffusion_coefficient`   | Diffusion coefficient calculated from fitting MSD for a molecule       |
+| `anomalous_exponent`   | Alpha calculated from fitting MSD for a molecule         |
+| `log_diffusion_coefficient`   | Log-transformed diffusion coefficient (log 10)    |
+
+
 
 ---
 
@@ -101,11 +106,14 @@ Track-level motion classification.
 | `track_id`           | Unique ID of the track                                     |
 | `radius_of_gyration` | Raw radius of gyration                                     |
 | `log_rg`             | Log-transformed radius of gyration                         |
+| `diffusion_coefficient`             | Diffusion coefficient calculated from fitting MSD for a molecule                           |
+| `anomalous_exponent`             | Alpha calculated from fitting MSD for a molecule                         |
+| `log_diffusion_coefficient`             |Log-transformed diffusion coefficient                        |
 | `predicted_class`    | Motion class (e.g., 0 = bound, 1 = diffusive)              |
 | `confidence`         | Posterior probability of assigned class                    |
 | `status`             | Classification status (e.g., "classified", "low_confidence") |
 **Note:** 
-if the confidence threshold is set to low, all the tracks willbe assigned to a class. So if you dont want any undetermined track, set the confidence threshold to 0 in the config file. 
+If the confidence threshold is set to low, all the tracks will be assigned to a class. So if you dont want any undetermined track, set the confidence threshold to 0 in the config file. 
 ---
 
 #### `classification_summary.csv`
@@ -153,7 +161,7 @@ The GMM is used in the pipeline to:
   - Fitted Gaussian components
   - Decision thresholds (if enabled)
  
- **Note**: The `plot_thresholds` option is intended purely for visualization and interpretability. It displays threshold lines based on the Gaussian mixture model but **does not** affect the actual classification, which is determined by the posterior probabilities of the fitted GMM components.
+ **Note**: The `plot_thresholds` option is intended purely for visualization and interpretability. It displays threshold lines based on the Gaussian mixture model but **does not** affect the actual classification, which is determined by the **posterior probabilities** of the fitted GMM components.
 
 ---
 
