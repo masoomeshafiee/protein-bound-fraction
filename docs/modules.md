@@ -22,7 +22,7 @@ Workflow Steps:
 | Module               | Purpose                                                 |
 | -------------------- | ------------------------------------------------------- |
 | `load_data`          | Loads raw TrackMate CSVs and masks                               |
-| `filter_data`        | Filters short tracks and non-masked areas |
+| `filter_data`        | Filters short tracks and non-masked areas. Converts x and y (spot positions) from pixle into real-world units (micrometer).|
 | `feature_extraction` | Computes features like radius of gyration               |
 | `motion_classifier`  | GMM-based classification of molecular motion            |
 | `save_metadata`      | Stores pipeline config, pip environment, and input list |
@@ -269,6 +269,8 @@ This module filters:
 - Short tracks (below a user-defined duration)
 - Tracks and spots that fall outside segmented cell masks
 
+**Note**: It also converts the `x_loc` and `y_loc` into the real-world units (micron) based on the pixl size (um) provided in the config file. 
+
 It supports both **population-level** and **single-cell-level** analysis and logs all issues for traceability.
 
 
@@ -327,7 +329,8 @@ Filters spot records to retain only those associated with the filtered tracks.
 Performs end-to-end filtering of tracks and spots for each file using a single mask for all cells.
 
  **Returns**
-- `dict` of filtered `tracks`, `spots`, and `mask` or empty dict on failure
+- `dict` of filtered `tracks`, `spots`, and `mask` or empty dict on failure.
+**Note**: The spots data will have two extra columns: `x_loc_um` and `y_loc_um`. 
 
 **Common Issues Logged**
 - Empty tracks after duration or mask filtering
@@ -343,6 +346,7 @@ Filters tracks and spots for each **individual cell** using labeled mask values.
 
 **Returns**
 - `dict` in format `{cell_id: {'tracks': ..., 'spots': ..., 'mask': ...}}` or empty dict
+**Note**: The spots data will have two extra columns: `x_loc_um` and `y_loc_um`. 
 
 **Additional Behavior**
 - Iterates over unique `cell_id`s in the mask
@@ -362,10 +366,11 @@ Main entry point to filter a dataset either at population or single-cell level.
 | `data`              | `dict`  | Raw input data per file: `{file_name: {'spots', 'tracks', 'mask'}}`         |
 | `min_track_length`  | `int`   | Minimum duration of tracks to keep                                          |
 | `columns_names`     | `dict`  | Expected columns for validation: `{'spots': [...], 'tracks': [...]}`        |
+| `pixel_size_um`| `float` | The pixle size of the microscope used (in micron). Deafult = 0.094     |
 | `analyze_single_cell`| `bool` | Whether to run per-cell (True) or population-level (False) filtering        |
 
 **Returns**
-- `filtered`: Filtered data dictionary (population or cell-level)
+- `filtered`: Filtered data dictionary (population or cell-level) with the extra `x_loc_um` and `y_loc_um` columns in the spot data. 
 - `issue_dict`: Dictionary logging all issues, keyed by file and optionally cell ID
 
  **Raises**
@@ -394,7 +399,7 @@ Downstream: Provides clean input for `feature_extraction.py`, `motion_classifier
 ## `feature_extraction.py` — Track-Level Feature Extraction Module
 
 This module computes track-level features from spot data.
-Currently focusing on the **radius of gyration**, but scalable to extract other features in the future.
+Currently focusing on the **radius of gyration** and **MSD features**, but scalable to extract other features in the future.
 
 
 
@@ -430,7 +435,7 @@ Extracts radius of gyration and its log-transformed version for each track in a 
   - `cell_id` (if applicable)
   - `track_id`
   - `radius_of_gyration`
-  - `log_rg` (log-transformed Rg)
+  - `log_rg` (log-transformed Rg - natural log)
 
 **Failure Handling**
 - Logs and skips if:
@@ -438,13 +443,85 @@ Extracts radius of gyration and its log-transformed version for each track in a 
   - Validation fails
   - Track data is missing or malformed
   - Radius of gyration calculation fails
+  
 
 
+##### `calculate_MSD(spots_within_track, x="x_loc_um", y="y_loc_um")`
+**Purpose**: Calculates the Mean Squared Displacement (MSD) for a track using the spots within the track.
+**Parameters**:
+| Name                | Type             | Description                                                                 |
+|---------------------|------------------|-----------------------------------------------------------------------------|
+| `spots_within_track`     | `Pandas dataframe`           |  containing the spots within the track must have x and y location in micrometers             |
+| `x`     | `string`           | column name for x location in micrometers            |
+| `y`     | `dict`           | column name for y location in micrometers         |
 
-##### `extract_features(filtered_data, issue_dict, columns_names, feature_list, analyze_single_cell=False)`
+**Returns**:
+    - `msd`: list of the average of squared displacements over all possible starting points for the same time lag based on the formula:
+    MSD = <(x(t+dt) - x(t))^2 + (y(t+dt) - y(t))^2> for different time lags (dt)
+    where <> denotes the average over all possible starting points t.
+    The output is a list of MSD values for increasing time lags:
+    msd = [MSD(1Δt), MSD(2Δt), MSD(3Δt), ...]
+
+#### `fit_MSD(msd, frame_interval, b, T_int, T_exp, max_time_lag=None)`:
+**Purpose**:
+MSD fitting function that accounts for localization error correction.
+MSD(t) = 4D*t^alpha + (4b^2 - 8*(1/6)*(T_int/T_exp)*D*T_int)
+
+**Parameters**:
+| Name                | Type             | Description                                                                 |
+|---------------------|------------------|-----------------------------------------------------------------------------|
+| `msd`     | `lsit`           |  List of Msd for a molecule calculated by calculate_MSD function             |
+| `frame_interval`     | `float`           | Time interval in second.          |
+| `b`     | `float`           | Localization error in micrometers         |
+| `T_int`     | `float`           | Integration time: the amount of time the camera sensor is actively collecting photons for one frame. It’s how long the shutter is “open” for each image.        |
+| `T_exp`     | `float`           |     Laser exposure time in second. |
+| `max_time_lag`     | `int`           |   Optional (default: None), maximum time lag to consider for fitting.   |
+
+**Returns:**
+D, alpha: Diffusion coefficient and alpha for the given molecule. 
+
+##### `fit_MSD_brownian(msd, frame_interval, b, T_int, T_exp, max_time_lag=None)`
+
+Same as fit_MSD function, but assumes molecule follows brownian motion (alpha=1). So it fits MSD to only calculate the diffusion coefficient for the given molecule. 
+
+
+##### `extract_msd(file_name, data_block, issue_dict, columns_names, cell_id=None, use_brownian_only=False, b=0.0, frame_interval=0.01, T_int=0.009, T_exp=0.01, max_time_lag=None):`
+
+**Purpose:**
+Extract MSD features from a single data block (file or cell level).
+
+**Parameters**
+| Name          | Type           | Description                                                  |
+|---------------|----------------|--------------------------------------------------------------|
+| `file_name`   | `str`          | Filename associated with the data block                      |
+| `data_block`  | `dict`         | Must contain a `'spots'` DataFrame                           |
+| `issue_dict`  | `dict`         | Logs issues by file and (optionally) cell                    |
+| `columns_names` | `dict`       | Column name mappings for validation                          |
+| `cell_id`     | `str` or None  | Optional ID if analyzing individual cells                    |
+| `use_brownian_only`     | `bool`  | whether to use only Brownian motion fitting (alpha = 1).                    |
+| `b`     | `float`           | Localization error in micrometers         |
+| `T_int`     | `float`           | Integration time: the amount of time the camera sensor is actively collecting photons for one frame. It’s how long the shutter is “open” for each image.        |
+| `T_exp`     | `float`           |     Laser exposure time in second. |
+| `max_time_lag`     | `int`           |   Optional (default: None), maximum time lag to consider for fitting.   |
+
+**Returns:**
+**msd_df**: pd.DataFrame containing the diffusion coefficient and anomalous exponent (alpha) for each track_id within the data block.
+
+##### `_merge_feature_dataframes(feature_dfs, key_columns):`
+**Purpose:**
+Helper internal function to outer merge multiple feature dataframes on the specified key columns.
+**Parameters:**
+| Name          | Type           | Description                                                  |
+|---------------|----------------|--------------------------------------------------------------|
+| `feature_dfs`   | `list`          | list of feature dataframes to merge (example: df of radius of gyration, df of MSD features).                     |
+| `key_columns`  | `list of strings`         | list of column names to merge on.                           |
+**Returns:**
+    - merged_df: pd.DataFrame, merged dataframe containing all features for the given data block.
+
+##### `extract_features(filtered_data, issue_dict, columns_names, feature_list, analyze_single_cell=False, MSD_params=None)`
 
 **Purpose**
-Top-level API to extract features (currently `radius_of_gyration`) from filtered tracking data, supporting both bulk and single-cell analysis.
+Top-level API to extract features (currently `radius_of_gyration`,`log_rg`,  `diffusion_coefficient`,`anomalous_exponent`, and `log_diffusion_coefficient`) from filtered tracking data, supporting both bulk and single-cell analysis.
 
 **Parameters**
 | Name                | Type             | Description                                                                 |
@@ -454,6 +531,7 @@ Top-level API to extract features (currently `radius_of_gyration`) from filtered
 | `columns_names`     | `dict`           | Expected column names for spots and tracks                                 |
 | `feature_list`      | `list[str]`      | Features to extract (currently only `'radius_of_gyration'` supported)      |
 | `analyze_single_cell` | `bool`         | If True, extract features per cell, otherwise per file                     |
+| `MSD_params` | `Dict`         | Dict containing the parameters for MSD calculation (set in the config file, check the config.md for more info).                    |
 
 **Returns**
 - `pd.DataFrame`: Flattened table of extracted features
