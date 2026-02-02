@@ -152,6 +152,7 @@ def extract_msd(file_name, data_block, issue_dict, columns_names, cell_id=None, 
     - frame_interval: float, time interval between frames in seconds.
     - T_int: float, integration time in seconds.
     - T_exp: float, exposure time in seconds.
+    - max_time_lag: int, optional, maximum time lag to consider for fitting.
     Returns:
     - msd_df: pd.DataFrame containing the diffusion coefficient and anomalous exponent (alpha) for each track_id within the data block.
     """
@@ -250,6 +251,13 @@ def extract_features(filtered_data, issue_dict, columns_names, feature_list, ana
     - feature_list: List of features to extract. Currently only 'radius_of_gyration' and 'msd_features' are supported.
     - analyze_single_cell: Bool, if True, the features are calculated and stored for tracks in each cell separately for the single cell analysis.
     if False: the features are calculated and stored for all tracks in the image.
+    - MSD_params: Dict containing the parameters for MSD calculation:
+        - use_brownian_only (bool): Whether to use only Brownian motion fitting (alpha = 1).
+        - b (float): Localization error in micrometers.
+        - frame_interval (float): Time interval between frames in seconds.
+        - T_int (float): Integration time in seconds.
+        - T_exp (float): Exposure time in seconds.
+        - max_time_lag (int): Maximum time lag to consider for fitting.
     Returns:
     - processed_data(pd.DataFrame): DataFrame containing the file name, cell_id (if applicable), and the extracted features.
     """
